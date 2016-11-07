@@ -1,4 +1,5 @@
 $:.unshift './lib'
+
 # A sample traject configuration, save as say `traject_config.rb`, then
 # run `traject -c traject_config.rb marc_file.marc` to index to
 # solr specified in config file, according to rules specified in
@@ -25,7 +26,11 @@ settings do
 end
 
 # Extract first 001, then supply code block to add "bib_" prefix to it
-to_field "id", extract_marc("001a")
+to_field "id", extract_marc("001a") do |record, accumulator|
+  accumulator.map! do |v|
+    v.sub(/^a/, '')
+  end
+end
 to_field "marcxml", serialized_marc(:format => "xml", :binary_escape => false, :allow_oversized => true)
 # TODO: marcbib_xml
 

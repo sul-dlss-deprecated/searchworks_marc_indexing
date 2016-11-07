@@ -2,8 +2,9 @@ source 'https://rubygems.org'
 
 gem 'traject'
 
-group :development do
+group :development, :test do
   gem 'solr_wrapper'
+  gem 'rspec'
 end
 
 gem 'byebug'
