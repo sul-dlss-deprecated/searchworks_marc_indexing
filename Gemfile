@@ -8,3 +8,4 @@ group :development, :test do
 end
 
 gem 'byebug'
+gem 'rake'
