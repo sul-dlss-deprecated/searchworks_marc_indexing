@@ -1,195 +1,245 @@
-# # Stanford mappings from MARC data to Solr fields
+$:.unshift './lib'
+# A sample traject configuration, save as say `traject_config.rb`, then
+# run `traject -c traject_config.rb marc_file.marc` to index to
+# solr specified in config file, according to rules specified in
+# config file
+
+
+# To have access to various built-in logic
+# for pulling things out of MARC21, like `marc_languages`
+require 'traject/macros/marc21_semantics'
+extend  Traject::Macros::Marc21Semantics
+
+# To have access to the traject marc format/carrier classifier
+require 'traject/macros/marc_format_classifier'
+extend Traject::Macros::MarcFormats
+
+
+# In this case for simplicity we provide all our settings, including
+# solr connection details, in this one file. But you could choose
+# to separate them into antoher config file; divide things between
+# files however you like, you can call traject with as many
+# config files as you like, `traject -c one.rb -c two.rb -c etc.rb`
+settings do
+  provide "solr.url", "http://localhost:8983/solr/blacklight-core"
+end
+
+# Extract first 001, then supply code block to add "bib_" prefix to it
+to_field "id", extract_marc("001a")
+to_field "marcxml", serialized_marc(:format => "xml", :binary_escape => false, :allow_oversized => true)
+# TODO: marcbib_xml
+
+to_field "all_search", extract_all_marc_values # TODO: + 024 027 028 033 905 908 920 986 979
+# TODO: to_field "vern_all_search"
+
+to_field "title_245a_search", extract_marc('245a', alternate_script: false)
+to_field "vern_title_245a_search", extract_marc('245a', alternate_script: :only)
+
+to_field "title_245_search", extract_marc('245abfgknps', alternate_script: false)
+to_field "vern_title_245_search", extract_marc('245abfgknps', alternate_script: :only)
+
+to_field "title_uniform_search", extract_marc('130adfgklmnoprst:240adfgklmnoprs', first: true, alternate_script: false)
+to_field "vern_title_uniform_search", extract_marc('130adfgklmnoprst:240adfgklmnoprs', first: true, alternate_script: :only)
+
+to_field "title_variant_search", extract_marc("210ab:222ab:242abnp:243adfgklmnoprs:246abfgnp:247abfgnp", alternate_script: false)
+to_field "vern_title_variant_search", extract_marc("210ab:222ab:242abnp:243adfgklmnoprs:246abfgnp:247abfgnp", alternate_script: :only)
+to_field "title_related_search", extract_marc("505t:700fgklmnoprst:710dfgklmnoprst:711fgklnpst:730adfgklmnoprst:740anp:760st:762st:765st:767st:770st:772st:773st:774st:775st:776st:777st:780st:785st:786st:787st:796fgklmnoprst:797dfgklmnoprst:798fgklnpst:799adfgklmnoprst", alternate_script: false)
+to_field "vern_title_related_search", extract_marc("505t:700fgklmnoprst:710dfgklmnoprst:711fgklnpst:730adfgklmnoprst:740anp:760st:762st:765st:767st:770st:772st:773st:774st:775st:776st:777st:780st:785st:786st:787st:796fgklmnoprst:797dfgklmnoprst:798fgklnpst:799adfgklmnoprst", alternate_script: :only)
+# Title Display Fields
+to_field "title_245a_display", extract_marc('245a', alternate_script: false, trim_punctuation: true)
+to_field "vern_title_245a_display", extract_marc('245a', alternate_script: :only, trim_punctuation: true)
+
+to_field "title_245c_display", extract_marc('245c', alternate_script: false, trim_punctuation: true)
+to_field "vern_title_245c_display", extract_marc('245c', alternate_script: :only, trim_punctuation: true)
+
+
+# no sub c in title_display
+
+to_field "title_display", extract_marc('245abdefghijklmnopqrstuvwxyz', alternate_script: false, trim_punctuation: true)
+to_field "vern_title_display", extract_marc('245abdefghijklmnopqrstuvwxyz', alternate_script: :only, trim_punctuation: true)
+to_field "title_full_display", extract_marc('245abcdefghijklmnopqrstuvwxyz', alternate_script: false)
+to_field "vern_title_full_display", extract_marc('245abcdefghijklmnopqrstuvwxyz', alternate_script: :only)
+# ? no longer will use title_uniform_display due to author-title searching needs ? 2010-11
+to_field "title_uniform_display", extract_marc('130abcdefghijklmnopqrstuvwxyz:240abcdefghijklmnopqrstuvwxyz', alternate_script: false, first: true)
+to_field "vern_title_uniform_display", extract_marc('130abcdefghijklmnopqrstuvwxyz:240abcdefghijklmnopqrstuvwxyz', alternate_script: :only, first: true)
+# Title Sort Field
+# TODO: to_field "title_sort",  custom, getSortTitle
+
+# Series Search Fields
+to_field "series_search", extract_marc("440anpv:490av:800abdefghijklmnopqrstuvwx:810abdefghijklmnopqrstuvwx:811abdefghijklmnopqrstuvwx:830abdefghijklmnopqrstuvwx", alternate_script: false)
+to_field "vern_series_search", extract_marc("440anpv:490av:800abdefghijklmnopqrstuvwx:810abdefghijklmnopqrstuvwx:811abdefghijklmnopqrstuvwx:830abdefghijklmnopqrstuvwx", alternate_script: :only)
+to_field "series_exact_search", extract_marc("830a", alternate_script: false)
+
+
+# Author Title Search Fields
+# TODO: to_field "author_title_search",  custom, getAuthorTitleSearch
+
+# Author Search Fields
+# IFF relevancy of author search needs improvement, unstemmed flavors for author search
+#   (keep using stemmed version for everything search to match stemmed query)
+to_field "author_1xx_search", extract_marc("100abcdgjqu:110abcdgnu:111acdegjnqu", alternate_script: false)
+to_field "vern_author_1xx_search", extract_marc("100abcdgjqu:110abcdgnu:111acdegjnqu", alternate_script: :only)
+to_field "author_7xx_search", extract_marc("700abcdgjqu:720ae:796abcdgjqu:710abcdgnu:797abcdgnu:711acdejngqu:798acdegjnqu", alternate_script: false)
+to_field "vern_author_7xx_search", extract_marc("700abcdgjqu:720ae:796abcdgjqu:710abcdgnu:797abcdgnu:711acdegjnqu:798acdegjnqu", alternate_script: :only)
+to_field "author_8xx_search", extract_marc("800abcdegjqu:810abcdegnu:811acdegjnqu", alternate_script: false)
+to_field "vern_author_8xx_search", extract_marc("800abcdegjqu:810abcdegnu:811acdegjnqu", alternate_script: :only)
+
+# Author Facet Fields
+to_field "author_person_full_display", extract_marc("100800abdefghijklmnopqrstuvwxyz", alternate_script: false)
+to_field "author_person_facet", extract_marc('100abcdq:700abcdq', alternate_script: false, trim_punctuation: true)
+to_field "author_other_facet", extract_marc('110abcdn:111acdn:710abcdn:711acdn', alternate_script: false, trim_punctuation: true)
+# Author Display Fields
+to_field "author_person_display",  extract_marc('100abcdq', alternate_script: false, trim_punctuation: true)
+to_field "vern_author_person_display",  extract_marc('100abcdq', alternate_script: :only, trim_punctuation: true)
+to_field "author_person_full_display", extract_marc("100abdefghijklmnopqrstuvwxyz", alternate_script: false)
+to_field "vern_author_person_full_display", extract_marc("100abdefghijklmnopqrstuvwxyz", alternate_script: :only)
+to_field "author_corp_display", extract_marc("110abdefghijklmnopqrstuvwxyz", alternate_script: false)
+to_field "vern_author_corp_display", extract_marc("110abdefghijklmnopqrstuvwxyz", alternate_script: :only)
+to_field "author_meeting_display", extract_marc("111abdefghijklmnopqrstuvwxyz", alternate_script: false)
+to_field "vern_author_meeting_display", extract_marc("111abdefghijklmnopqrstuvwxyz", alternate_script: :only)
+# Author Sort Field
+# TODO: to_field "author_sort",  custom, getSortableAuthor
+
+# Subject Search Fields
+#  should these be split into more separate fields?  Could change relevancy if match is in field with fewer terms
+to_field "topic_search", extract_marc("650abcdefghijklmnopqrstu:653abcdefghijklmnopqrstu:654abcdefghijklmnopqrstu:690abcdefghijklmnopqrstu", alternate_script: false)
+to_field "vern_topic_search", extract_marc("650abcdefghijklmnopqrstu:653abcdefghijklmnopqrstu:654abcdefghijklmnopqrstu:690abcdefghijklmnopqrstu", alternate_script: :only)
+to_field "topic_subx_search", extract_marc("600x:610x:611x:630x:650x:651x:655x:656x:657x:690x:691x:696x:697x:698x:699x", alternate_script: false)
+to_field "vern_topic_subx_search", extract_marc("600x:610x:611x:630x:650x:651x:655x:656x:657x:690x:691x:696x:697x:698x:699x", alternate_script: :only)
+to_field "geographic_search", extract_marc("651abcdefghijklmnopqrstu:691abcdefghijklmnopqrstu:691abcdefghijklmnopqrstu", alternate_script: false)
+to_field "vern_geographic_search", extract_marc("651abcdefghijklmnopqrstu:691abcdefghijklmnopqrstu:691abcdefghijklmnopqrstu", alternate_script: :only)
+to_field "geographic_subz_search", extract_marc("600z:610z:630z:650z:651z:654z:655z:656z:657z:690z:691z:696z:697z:698z:699z", alternate_script: false)
+to_field "vern_geographic_subz_search", extract_marc("600z:610z:630z:650z:651z:654z:655z:656z:657z:690z:691z:696z:697z:698z:699z", alternate_script: :only)
+to_field "subject_other_search", extract_marc(%w(600 610 611 630 655 656 657 658 696 697 698 699).map { |c| "#{c}abcdefghijklmnopqrstu"}.join(':'), alternate_script: false)
+to_field "vern_subject_other_search", extract_marc(%w(600 610 611 630 655 656 657 658 696 697 698 699).map { |c| "#{c}abcdefghijklmnopqrstu"}.join(':'), alternate_script: :only)
+to_field "subject_other_subvy_search", extract_marc(%w(600 610 611 630 655 656 657 658 696 697 698 699).map { |c| "#{c}abcdefghijklmnopqrstuwxz"}.join(':'), alternate_script: false)
+to_field "vern_subject_other_subvy_search", extract_marc(%w(600 610 611 630 655 656 657 658 696 697 698 699).map { |c| "#{c}abcdefghijklmnopqrstuwxz"}.join(':'), alternate_script: :only)
+to_field "subject_all_search", extract_marc(%w(600 610 611 630 648 650 651 652 653 654 655 656 657 658 662 690 696 697 698 699).map { |c| "#{c}abcdefghijklmnopqrstuwxz"}.join(':'), alternate_script: false)
+to_field "vern_subject_all_search", extract_marc(%w(600 610 611 630 648 650 651 652 653 654 655 656 657 658 662 690 696 697 698 699).map { |c| "#{c}abcdefghijklmnopqrstuvwxyz"}.join(':'), alternate_script: :only)
+# Subject Facet Fields
+to_field "topic_facet", extract_marc("600abcdq:600t:610ab:610t:630a:630t:650a:655a", alternate_script: false, trim_punctuation: true)
+# TODO: to_field "geographic_facet", extract_marc("651a:6xxz", alternate_script: false, strip_punctuation: true)
+to_field "era_facet", extract_marc("650y:651y", alternate_script: false, trim_punctuation: true)
+
+# Publication Fields
+to_field "pub_search", extract_marc("260a:264a", trim_punctuation: true) do |record, accumulator|
+  accumulator.reject! do |v|
+    v =~ Regexp.union(/.*s\\.l\\..*/i, /.*place of .* not identified.*/i)
+  end
+end
+
+to_field "pub_search", extract_marc("260b:264b", trim_punctuation: true) do |record, accumulator|
+  accumulator.reject! do |v|
+    v =~ Regexp.union(/.*s\\.n\\..*/i, /.*r not identified.*/i)
+  end
+end
+
+to_field "vern_pub_search", extract_marc("260ab:264ab", alternate_script: :only)
+
+pub_country_008 = Traject::TranslationMap.new("pub_country_008")
+to_field "pub_country", extract_marc("008[15-17]:008[15-16]", translation_map: 'pub_country_008', first: true)
 # 
-# id = custom, getId
-# #marc21 = FullRecordAsMARC
-# marcxml = FullRecordAsXML
-# marcbib_xml = custom, bibOnlyXml
-# 
-# all_search = custom, getAllFields
-# vern_all_search = custom, getAllLinkedSearchableFields
-# 
-# # Title Search Fields
-# title_245a_search = 245a
-# vern_title_245a_search = custom, getLinkedField(245a)
-# title_245_search = 245abfgknps
-# vern_title_245_search = custom, getLinkedField(245abfgknps)
-# title_uniform_search = 130adfgklmnoprst:240adfgklmnoprs, first
-# vern_title_uniform_search = custom, getVernacular(130adfgklmnoprst:240adfgklmnoprs, first)
-# title_variant_search = 210ab:222ab:242abnp:243adfgklmnoprs:246abfgnp:247abfgnp
-# vern_title_variant_search = custom, getLinkedField(210ab:222ab:242abnp:243adfgklmnoprs:246abfgnp:247abfgnp)
-# title_related_search = 505t:700fgklmnoprst:710dfgklmnoprst:711fgklnpst:730adfgklmnoprst:740anp:760st:762st:765st:767st:770st:772st:773st:774st:775st:776st:777st:780st:785st:786st:787st:796fgklmnoprst:797dfgklmnoprst:798fgklnpst:799adfgklmnoprst
-# vern_title_related_search = custom, getLinkedField(505t:700fgklmnoprst:710dfgklmnoprst:711fgklnpst:730adfgklmnoprst:740anp:760st:762st:765st:767st:770st:772st:773st:774st:775st:776st:777st:780st:785st:786st:787st:796fgklmnoprst:797dfgklmnoprst:798fgklnpst:799adfgklmnoprst)
-# # Title Display Fields
-# title_245a_display = custom, removeTrailingPunct(245a, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,))
-# vern_title_245a_display = custom, vernRemoveTrailingPunc(245a, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,))
-# title_245c_display = custom, removeTrailingPunct(245c, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,))
-# vern_title_245c_display = custom, vernRemoveTrailingPunc(245c, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,))
-# # no sub c in title_display
-# title_display = custom, removeTrailingPunct(245abdefghijklmnopqrstuvwxyz, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,))
-# vern_title_display = custom, vernRemoveTrailingPunc(245abdefghijklmnopqrstuvwxyz, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,))
-# title_full_display = custom, getAllAlphaSubfields(245)
-# vern_title_full_display = custom, getLinkedField(245[a-z])
-# # ? no longer will use title_uniform_display due to author-title searching needs ? 2010-11
-# title_uniform_display = custom, getAllAlphaSubfields(130:240, first)
-# vern_title_uniform_display = custom, getVernacular(130abcdefghijklmnopqrstuvwxyz:240abcdefghijklmnopqrstuvwxyz, first)
-# # Title Sort Field
-# title_sort = custom, getSortTitle
-# 
-# # Series Search Fields
-# series_search = 440anpv:490av:800[a-x]:810[a-x]:811[a-x]:830[a-x]
-# vern_series_search = custom, getLinkedField(440anpv:490av:800[a-x]:810[a-x]:811[a-x]:830[a-x])
-# series_exact_search = 830a
-# 
-# # Author Title Search Fields
-# author_title_search = custom, getAuthorTitleSearch
-# 
-# # Author Search Fields
-# # IFF relevancy of author search needs improvement, unstemmed flavors for author search
-# #   (keep using stemmed version for everything search to match stemmed query)
-# author_1xx_search = 100abcdgjqu:110abcdgnu:111acdegjnqu
-# vern_author_1xx_search = custom, getLinkedField(100abcdgjqu:110abcdgnu:111acdegjnqu)
-# author_7xx_search = 700abcdgjqu:720ae:796abcdgjqu:710abcdgnu:797abcdgnu:711acdejngqu:798acdegjnqu
-# vern_author_7xx_search = custom, getLinkedField(700abcdgjqu:720ae:796abcdgjqu:710abcdgnu:797abcdgnu:711acdegjnqu:798acdegjnqu)
-# author_8xx_search = 800abcdegjqu:810abcdegnu:811acdegjnqu
-# vern_author_8xx_search = custom, getLinkedField(800abcdegjqu:810abcdegnu:811acdegjnqu)
-# # Author Facet Fields
-# author_person_facet = custom, removeTrailingPunct(100abcdq:700abcdq, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,) )
-# author_other_facet = custom, removeTrailingPunct(110abcdn:111acdn:710abcdn:711acdn, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,) )
-# # Author Display Fields
-# author_person_display = custom, removeTrailingPunct(100abcdq, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,) )
-# vern_author_person_display = custom, vernRemoveTrailingPunc(100abcdq, [\\\\,/;:], ([A-Za-z]{4}|[0-9]{3}|\\)|\\,))
-# author_person_full_display = custom, getAllAlphaSubfields(100)
-# vern_author_person_full_display = custom, getLinkedField(100[a-z])
-# author_corp_display = custom, getAllAlphaSubfields(110)
-# vern_author_corp_display = custom, getLinkedField(110[a-z])
-# author_meeting_display = custom, getAllAlphaSubfields(111)
-# vern_author_meeting_display = custom, getLinkedField(111[a-z])
-# # Author Sort Field
-# author_sort = custom, getSortableAuthor
-# 
-# # Subject Search Fields
-# #  should these be split into more separate fields?  Could change relevancy if match is in field with fewer terms
-# topic_search = custom, getTopicAllAlphaExcept(650vxyz:653vxyz:654vxyz:690vxyz)
-# vern_topic_search = custom, getVernAllAlphaExcept(650vxyz:653vxyz:654vxyz:690vxyz)
-# topic_subx_search = 600x:610x:611x:630x:650x:651x:655x:656x:657x:690x:691x:696x:697x:698x:699x
-# vern_topic_subx_search = custom, getLinkedField(600x:610x:611x:630x:650x:651x:655x:656x:657x:690x:691x:696x:697x:698x:699x)
-# geographic_search = custom, getAllAlphaExcept(651vxyz:691vxyz)
-# vern_geographic_search = custom, getVernAllAlphaExcept(651vxyz:691vxyz)
-# geographic_subz_search = 600z:610z:630z:650z:651z:654z:655z:656z:657z:690z:691z:696z:697z:698z:699z
-# vern_geographic_subz_search = custom, getLinkedField(600z:610z:630z:650z:651z:654z:655z:656z:657z:690z:691z:696z:697z:698z:699z)
-# subject_other_search = custom, getTopicAllAlphaExcept(600vxyz:610vxyz:611vxyz:630vxyz:655vxyz:656vxyz:657vxyz:658vxyz:696vxyz:697vxyz:698vxyz:699vxyz)
-# vern_subject_other_search = custom, getVernAllAlphaExcept(600vxyz:610vxyz:611vxyz:630vxyz:655vxyz:656vxyz:657vxyz:658vxyz:696vxyz:697vxyz:698vxyz:699vxyz)
-# subject_other_subvy_search = 600vy:610vy:611vy:630vy:650vy:651vy:654vy:655vy:656vy:657vy:690vy:691vy:696vy:697vy:698vy:699vy
-# vern_subject_other_subvy_search = custom, getLinkedField(600vy:610vy:611vy:630vy:650vy:651vy:654vy:655vy:656vy:657vy:690vy:691vy:696vy:697vy:698vy:699vy)
-# subject_all_search = custom, getAllAlphaSubfields(600:610:611:630:648:650:651:652:653:654:655:656:657:658:662:690:691:696:697:698:699)
-# vern_subject_all_search = custom, getLinkedField(600[a-z]:610[a-z]:611[a-z]:630[a-z]:648[a-z]:650[a-z]:651[a-z]:652[a-z]:653[a-z]:654[a-z]:655[a-z]:656[a-z]:657[a-z]:658[a-z]:662[a-z]:690[a-z]:691[a-z]:696[a-z]:697[a-z]:698[a-z]:699[a-z])
-# # Subject Facet Fields
-# topic_facet = custom, getTopicWithoutTrailingPunct(600abcdq:600t:610ab:610t:630a:630t:650a:655a, [\\\\,;:], ([A-Za-z0-9]{4}|\\)) )
-# geographic_facet = custom, getGeographicFacet([\\\\,;], ([A-Za-z0-9]{2}|\\)) )
-# era_facet = custom, removeTrailingPunct(650y:651y, [\\\\,;], ([A-Za-z0-9]{2}) )
-# 
-# # Publication Fields
-# pub_search = custom, getPublication
-# vern_pub_search = custom, getLinkedField(260ab:264ab)
-# pub_country = 008[15-17]:008[15-16], country_map.properties, first
 # # publication dates
 # # deprecated
-# pub_date = custom, getPubDate
-# pub_date_sort = custom, getPubDateSort
-# pub_year_tisim = custom, getPubDateSliderVals
+# to_field "pub_date",  custom, getPubDate
+# to_field "pub_date_sort",  custom, getPubDateSort
+# to_field "pub_year_tisim",  custom, getPubDateSliderVals
 # # from 008 date 1
-# publication_year_isi = custom, get008Date1(est)
-# beginning_year_isi = custom, get008Date1(cdmu)
-# earliest_year_isi = custom, get008Date1(ik)
-# earliest_poss_year_isi = custom, get008Date1(q)
-# release_year_isi = custom, get008Date1(p)
-# reprint_year_isi = custom, get008Date1(r)
-# other_year_isi = custom, getOtherYear
+# to_field "publication_year_isi",  custom, get008Date1(est)
+# to_field "beginning_year_isi",  custom, get008Date1(cdmu)
+# to_field "earliest_year_isi",  custom, get008Date1(ik)
+# to_field "earliest_poss_year_isi",  custom, get008Date1(q)
+# to_field "release_year_isi",  custom, get008Date1(p)
+# to_field "reprint_year_isi",  custom, get008Date1(r)
+# to_field "other_year_isi",  custom, getOtherYear
 # # from 008 date 2
-# ending_year_isi = custom, get008Date2(dm)
-# latest_year_isi = custom, get008Date2(ik)
-# latest_poss_year_isi = custom, get008Date2(q)
-# production_year_isi = custom, get008Date2(p)
-# original_year_isi = custom, get008Date2(r)
-# copyright_year_isi = custom, get008Date2(t)
+# to_field "ending_year_isi",  custom, get008Date2(dm)
+# to_field "latest_year_isi",  custom, get008Date2(ik)
+# to_field "latest_poss_year_isi",  custom, get008Date2(q)
+# to_field "production_year_isi",  custom, get008Date2(p)
+# to_field "original_year_isi",  custom, get008Date2(r)
+# to_field "copyright_year_isi",  custom, get008Date2(t)
 # # from 260c
-# imprint_display = custom, getImprint
-# 
+# to_field "imprint_display",  custom, getImprint
+
 # # Date field for new items feed
-# date_cataloged = custom, getDateCataloged
-# 
-# language = custom, getLanguages, language_map.properties
-# 
+# to_field "date_cataloged",  custom, getDateCataloged
+
+to_field "language", marc_languages("008[35-37]:041a:041d:041e:041j")
+
 # # old format field, left for continuity in UI URLs for old formats
-# format = custom, getOldFormats
-# format_main_ssim = custom, getMainFormats
-# format_physical_ssim = custom, getPhysicalFormats
-# genre_ssim = custom, getGenres
+# to_field "format",  custom, getOldFormats
+# to_field "format_main_ssim",  custom, getMainFormats
+# to_field "format_physical_ssim",  custom, getPhysicalFormats
+# to_field "genre_ssim",  custom, getGenres
 # 
-# db_az_subject = custom, getDbAZSubjects, db_subjects_map.properties
-# 
-# physical = 300abcefg
-# vern_physical = custom, getLinkedField(300abcefg)
-# 
-# toc_search = 905art:505art
-# vern_toc_search = custom, getLinkedField(505art)
-# context_search = 518a
-# vern_context_search = custom, getLinkedField(518a)
-# summary_search = 920ab:520ab
-# vern_summary_search = custom, getLinkedField(520ab)
-# award_search = 986a:586a
-# 
+# to_field "db_az_subject",  custom, getDbAZSubjects, db_subjects_map.properties
+
+to_field "physical", extract_marc("300abcefg", alternate_script: false)
+to_field "vern_physical", extract_marc("300abcefg", alternate_script: :only)
+
+to_field "toc_search", extract_marc("905art:505art", alternate_script: false)
+to_field "vern_toc_search", extract_marc("505art", alternate_script: :only)
+to_field "context_search", extract_marc("518a", alternate_script: false)
+to_field "vern_context_search", extract_marc("518a", alternate_script: :only)
+to_field "summary_search", extract_marc("920ab:520ab", alternate_script: false)
+to_field "vern_summary_search", extract_marc("520ab", alternate_script: :only)
+to_field "award_search", extract_marc("986a:586a", alternate_script: false)
+
 # # URL Fields
-# url_fulltext = custom, getFullTextUrls
-# url_suppl = custom, getSupplUrls
-# url_sfx = 956u, (pattern_map.sfx)
-# url_restricted = custom, getRestrictedUrls
+# to_field "url_fulltext",  custom, getFullTextUrls
+# to_field "url_suppl",  custom, getSupplUrls
+to_field "url_sfx",  extract_marc("956u") do |record, accumulator|
+  accumulator.select! do |v|
+    v =~ Regexp.union(%r{^(http://library.stanford.edu/sfx\\?(.+))}, %r{^(http://caslon.stanford.edu:3210/sfxlcl3\\?(.+))})
+  end
+end
+# to_field "url_restricted",  custom, getRestrictedUrls
+
+# Standard Number Fields
+# to_field "isbn_search",  custom, getUserISBNs
+# Added fields for searching based upon list from Kay Teel in JIRA ticket INDEX-142
+to_field "issn_search", extract_marc("022a:022l:022m:022y:022z:400x:410x:411x:440x:490x:510x:700x:710x:711x:730x:760x:762x:765x:767x:770x:771x:772x:773x:774x:775x:776x:777x:778x:779x:780x:781x:782x:783x:784x:785x:786x:787x:788x:789x:800x:810x:811x:830x") do |record, accumulator|
+  accumulator.select! do |v|
+    v =~ /^(\\d{4}-\\d{3}[X\\d]\\D*)$/
+  end
+end
+# to_field "isbn_display",  custom, getISBNs
+# to_field "issn_display",  custom, getISSNs
+to_field "lccn", extract_marc("010a:010z", first: true) do |record, accumulator|
+  accumulator.select! do |v|
+    v =~ Regexp.union(/^(([ a-z]{3}\\d{8})|([ a-z]{2}\\d{10})) ?/, %r{( /.*)?$})
+  end
+end
+to_field "oclc", oclcnum("035a:079a")
+
+# Call Number Fields
+# to_field "callnum_facet_hsim",  custom, getCallNumHierarchVals(|, callnumber_map)
+# to_field "callnum_search",  custom, getLocalCallNums
+# to_field "shelfkey",  custom, getShelfkeys
+# to_field "reverse_shelfkey",  custom, getReverseShelfkeys
+
+# Location facet
+# to_field "location_facet",  custom, getLocationFacet
+
+# Item Info Fields (from 999 that aren't call number)
+to_field "barcode_search", extract_marc("999i", alternate_script: false)
+# to_field "preferred_barcode",  custom, getPreferredItemBarcode
+# to_field "access_facet",  custom, getAccessMethods
+# to_field "building_facet",  custom, getBuildings, library_map.properties
+# to_field "item_display",  customDeleteRecordIfFieldEmpty, getItemDisplay
+
+# to_field "on_order_library_ssim",  custom, getOnOrderLibraries, library_on_order_map.properties
 # 
-# # Standard Number Fields
-# isbn_search = custom, getUserISBNs
-# # Added fields for searching based upon list from Kay Teel in JIRA ticket INDEX-142
-# issn_search = 022a:022l:022m:022y:022z:400x:410x:411x:440x:490x:510x:700x:710x:711x:730x:760x:762x:765x:767x:770x:771x:772x:773x:774x:775x:776x:777x:778x:779x:780x:781x:782x:783x:784x:785x:786x:787x:788x:789x:800x:810x:811x:830x, (pattern_map.issn)
-# isbn_display = custom, getISBNs
-# issn_display = custom, getISSNs
-# lccn = 010a:010z, (pattern_map.lccn), first
-# oclc = custom, getOCLCNums
-# 
-# # Call Number Fields
-# callnum_facet_hsim = custom, getCallNumHierarchVals(|, callnumber_map)
-# callnum_search = custom, getLocalCallNums
-# shelfkey = custom, getShelfkeys
-# reverse_shelfkey = custom, getReverseShelfkeys
-# 
-# # Location facet
-# location_facet = custom, getLocationFacet
-# 
-# # Item Info Fields (from 999 that aren't call number)
-# barcode_search = 999i
-# preferred_barcode = custom, getPreferredItemBarcode
-# access_facet = custom, getAccessMethods
-# building_facet = custom, getBuildings, library_map.properties
-# item_display = customDeleteRecordIfFieldEmpty, getItemDisplay
-# 
-# on_order_library_ssim = custom, getOnOrderLibraries, library_on_order_map.properties
-# 
-# mhld_display = custom, getMhldDisplay
-# bookplates_display = custom, getBookplatesDisplay
-# fund_facet = custom, getFundFacet
+# to_field "mhld_display",  custom, getMhldDisplay
+# to_field "bookplates_display",  custom, getBookplatesDisplay
+# to_field "fund_facet",  custom, getFundFacet
 # 
 # # Digitized Items Fields
-# managed_purl_urls = custom, getManagedPurls
-# collection = custom, getCollectionDruids
-# collection_with_title = custom, getCollectionsWithTitles
-# set = custom, getSetDruids
-# set_with_title = custom, getSetsWithTitles
-# collection_type = custom, getCollectionType
-# file_id = custom, getFileId
-# 
-# # INDEX-142 NOTE 3: Lane Medical adds (Print) or (Digital) descriptors to their ISSNs
-# # so need to account for it in the pattern match below
-# pattern_map.issn.pattern_0 = ^(\\d{4}-\\d{3}[X\\d]\\D*)$=>$1
-# 
-# pattern_map.lccn.pattern_0 = ^(([ a-z]{3}\\d{8})|([ a-z]{2}\\d{10})) ?|( /.*)?$=>$1
-# 
-# pattern_map.sfx.pattern_0 = ^(http://library.stanford.edu/sfx\\?(.+))=>$1
-# pattern_map.sfx.pattern_1 = ^(http://caslon.stanford.edu:3210/sfxlcl3\\?(.+))=>$1
+# to_field "managed_purl_urls",  custom, getManagedPurls
+# to_field "collection",  custom, getCollectionDruids
+# to_field "collection_with_title",  custom, getCollectionsWithTitles
+# to_field "set",  custom, getSetDruids
+# to_field "set_with_title",  custom, getSetsWithTitles
+# to_field "collection_type",  custom, getCollectionType
+# to_field "file_id",  custom, getFileId
