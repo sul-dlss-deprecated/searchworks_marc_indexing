@@ -25,4 +25,70 @@ RSpec.describe 'Searchworks indexing' do
       end
     end
   end
+
+  describe 'pub_search' do
+    context 'record with a value in the 260a field' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('260', '0', '1', MARC::Subfield.new('a', 'data'))) } }
+
+      it 'pulls the value from the field' do
+        expect(result).to include 'pub_search' => ['data']
+      end
+    end
+
+    context 'record with a value in the 264a field' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('264', '0', '1', MARC::Subfield.new('a', 'data'))) } }
+
+      it 'pulls the value from the field' do
+        expect(result).to include 'pub_search' => ['data']
+      end
+    end
+
+    context 'record with a value in the 260b field' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('260', '0', '1', MARC::Subfield.new('b', 'data'))) } }
+
+      it 'pulls the value from the field' do
+        expect(result).to include 'pub_search' => ['data']
+      end
+    end
+
+    context 'record with a value in the 264b field' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('264', '0', '1', MARC::Subfield.new('b', 'data'))) } }
+
+      it 'pulls the value from the field' do
+        expect(result).to include 'pub_search' => ['data']
+      end
+    end
+
+    context 'record with a s.l. value' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('260', '0', '1', MARC::Subfield.new('a', 's.L.'))) } }
+
+      it 'pulls the value from the field' do
+        expect(result).not_to include 'pub_search'
+      end
+    end
+
+    context 'record with place of X not identified' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('260', '0', '1', MARC::Subfield.new('a', 'place of publication not IDENTIFIED'))) } }
+
+      it 'pulls the value from the field' do
+        expect(result).not_to include 'pub_search'
+      end
+    end
+
+    context 'record with a s.n. value' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('260', '0', '1', MARC::Subfield.new('b', 's.N.'))) } }
+
+      it 'pulls the value from the field' do
+        expect(result).not_to include 'pub_search'
+      end
+    end
+
+    context 'record with X not identified' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('260', '0', '1', MARC::Subfield.new('b', 'author not IDENTIFIED'))) } }
+
+      it 'pulls the value from the field' do
+        expect(result).not_to include 'pub_search'
+      end
+    end
+  end
 end

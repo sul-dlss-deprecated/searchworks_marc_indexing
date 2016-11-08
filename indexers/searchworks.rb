@@ -127,15 +127,23 @@ to_field "topic_facet", extract_marc("600abcdq:600t:610ab:610t:630a:630t:650a:65
 to_field "era_facet", extract_marc("650y:651y", alternate_script: false, trim_punctuation: true)
 
 # Publication Fields
-to_field "pub_search", extract_marc("260a:264a", trim_punctuation: true) do |record, accumulator|
+to_field "pub_search", extract_marc("260a:264a") do |record, accumulator|
   accumulator.reject! do |v|
-    v =~ Regexp.union(/.*s\\.l\\..*/i, /.*place of .* not identified.*/i)
+    Regexp.union(/s\.l\./i, /place of .* not identified/i).match(v)
+  end
+
+  accumulator.map! do |v|
+    Traject::Macros::Marc21.trim_punctuation(v)
   end
 end
 
-to_field "pub_search", extract_marc("260b:264b", trim_punctuation: true) do |record, accumulator|
+to_field "pub_search", extract_marc("260b:264b") do |record, accumulator|
   accumulator.reject! do |v|
-    v =~ Regexp.union(/.*s\\.n\\..*/i, /.*r not identified.*/i)
+    Regexp.union(/s\.n\./i, /r not identified/i).match(v)
+  end
+
+  accumulator.map! do |v|
+    Traject::Macros::Marc21.trim_punctuation(v)
   end
 end
 
