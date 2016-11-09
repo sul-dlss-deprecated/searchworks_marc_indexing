@@ -91,4 +91,20 @@ RSpec.describe 'Searchworks indexing' do
       end
     end
   end
+
+  describe 'date_cataloged' do
+    context 'record with the value NEVER in the 916b' do
+      let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('916', '0', '1', MARC::Subfield.new('b', 'NEVER'))) } }
+
+      it 'ignores the value' do
+        expect(result).not_to include 'date_cataloged'
+      end
+    end
+
+    let(:record) { MARC::Record.new.tap { |r| r.append(MARC::DataField.new('916', '0', '1', MARC::Subfield.new('b', '20161109'))) } }
+
+    it 'formats the field as YYYY-MM-DDT00:00:00Z' do
+      expect(result).to include 'date_cataloged' => ['2016-11-09T00:00:00Z']
+    end
+  end
 end

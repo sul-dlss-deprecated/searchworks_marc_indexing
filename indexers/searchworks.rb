@@ -175,7 +175,13 @@ to_field "pub_country", extract_marc("008[15-17]:008[15-16]", translation_map: '
 # to_field "imprint_display",  custom, getImprint
 
 # # Date field for new items feed
-# to_field "date_cataloged",  custom, getDateCataloged
+to_field "date_cataloged", extract_marc("916b") do |record, accumulator|
+  accumulator.reject! { |v| v =~ /NEVER/i }
+
+  accumulator.map! do |v|
+    "#{v[0..3]}-#{v[4..5]}-#{v[6..7]}T00:00:00Z"
+  end
+end
 
 to_field "language", marc_languages("008[35-37]:041a:041d:041e:041j")
 
