@@ -149,7 +149,6 @@ end
 
 to_field "vern_pub_search", extract_marc("260ab:264ab", alternate_script: :only)
 
-pub_country_008 = Traject::TranslationMap.new("pub_country_008")
 to_field "pub_country", extract_marc("008[15-17]:008[15-16]", translation_map: 'pub_country_008', first: true)
 # 
 # # publication dates
